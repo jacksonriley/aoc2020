@@ -21,7 +21,7 @@ fn main() -> Result<(), std::io::Error> {
 
 fn part_one(numbers: &HashSet<u32>, target: u32) -> Option<u32> {
     // O(N) - loop over the numbers and check if the number that would sum to
-    // TARGET is in the set.
+    // the target is in the set.
     // Return None if no such pair of numbers is found.
     for x in numbers {
         if let Some(y) = target.checked_sub(*x) {
