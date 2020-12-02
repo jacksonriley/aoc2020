@@ -10,7 +10,20 @@ struct PasswordRule<'a> {
     password: &'a str,
 }
 
-impl PasswordRule<'_> {
+impl<'a> PasswordRule<'a> {
+    fn from_str(line: &'a str) -> Option<Self> {
+        let parse_result: Result<(usize, usize, char, &str), _> = scan!("{}-{} {}: {}" <- line);
+        match parse_result {
+            Ok(parsed) => Some(Self {
+                lower: parsed.0,
+                upper: parsed.1,
+                letter: parsed.2,
+                password: parsed.3,
+            }),
+            Err(_) => None,
+        }
+    }
+
     fn is_valid1(&self) -> bool {
         let num_instances = self.password.chars().filter(|&c| c == self.letter).count();
         (self.lower..=self.upper).contains(&num_instances)
@@ -36,20 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn parse_input(input: &str) -> Vec<PasswordRule> {
-    let mut passwords: Vec<PasswordRule> = Vec::new();
-    for line in input.lines() {
-        let p_res: Result<(usize, usize, char, &str), serde_scan::ScanError> =
-            scan!("{}-{} {}: {}" <- line);
-        if let Ok(parsed) = p_res {
-            passwords.push(PasswordRule {
-                lower: parsed.0,
-                upper: parsed.1,
-                letter: parsed.2,
-                password: parsed.3,
-            })
-        }
-    }
-    passwords
+    input.lines().filter_map(PasswordRule::from_str).collect()
 }
 
 fn part_one(passwords: &[PasswordRule]) -> usize {
