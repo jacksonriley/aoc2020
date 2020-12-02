@@ -28,25 +28,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let now = Instant::now();
     let input = std::fs::read_to_string("input/02")?;
 
-    let passwords = parse_input(&input)?;
+    let passwords = parse_input(&input);
     println!("Part 1: {}", part_one(&passwords));
     println!("Part 2: {}", part_two(&passwords));
     println!("Time: {}µs", now.elapsed().as_micros());
     Ok(())
 }
 
-fn parse_input(input: &str) -> Result<Vec<PasswordRule>, Box<dyn std::error::Error>> {
+fn parse_input(input: &str) -> Vec<PasswordRule> {
     let mut passwords: Vec<PasswordRule> = Vec::new();
     for line in input.lines() {
-        let parsed: (usize, usize, char, &str) = scan!("{}-{} {}: {}" <- line).unwrap();
-        passwords.push(PasswordRule {
-            lower: parsed.0,
-            upper: parsed.1,
-            letter: parsed.2,
-            password: parsed.3,
-        })
+        let p_res: Result<(usize, usize, char, &str), serde_scan::ScanError> =
+            scan!("{}-{} {}: {}" <- line);
+        if let Ok(parsed) = p_res {
+            passwords.push(PasswordRule {
+                lower: parsed.0,
+                upper: parsed.1,
+                letter: parsed.2,
+                password: parsed.3,
+            })
+        }
     }
-    Ok(passwords)
+    passwords
 }
 
 fn part_one(passwords: &[PasswordRule]) -> usize {
@@ -82,7 +85,7 @@ fn test_examples() {
             password: "ccccccccc",
         },
     ];
-    assert_eq!(parse_input(&input).unwrap(), expected);
+    assert_eq!(parse_input(&input), expected);
     assert_eq!(part_one(&expected), 2);
     assert_eq!(part_two(&expected), 1);
 }
