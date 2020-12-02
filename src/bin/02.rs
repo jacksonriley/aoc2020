@@ -1,7 +1,6 @@
-use regex::Regex;
 use std::time::Instant;
 #[macro_use]
-extern crate lazy_static;
+extern crate serde_scan;
 
 #[derive(Debug, Eq, PartialEq)]
 struct PasswordRule<'a> {
@@ -32,27 +31,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let passwords = parse_input(&input)?;
     println!("Part 1: {}", part_one(&passwords));
     println!("Part 2: {}", part_two(&passwords));
-    println!("Time: {}ms", now.elapsed().as_millis());
+    println!("Time: {}µs", now.elapsed().as_micros());
     Ok(())
 }
 
 fn parse_input(input: &str) -> Result<Vec<PasswordRule>, Box<dyn std::error::Error>> {
-    lazy_static! {
-        static ref PASSWORD_REGEX: Regex =
-            Regex::new(r"^(?P<lower>\d+)-(?P<upper>\d+) (?P<letter>\w): (?P<password>\w+)$")
-                .unwrap();
-    }
-
     let mut passwords: Vec<PasswordRule> = Vec::new();
     for line in input.lines() {
-        if let Some(caps) = PASSWORD_REGEX.captures(line) {
-            passwords.push(PasswordRule {
-                lower: caps.name("lower").unwrap().as_str().parse()?,
-                upper: caps.name("upper").unwrap().as_str().parse()?,
-                letter: caps.name("letter").unwrap().as_str().parse()?,
-                password: caps.name("password").unwrap().as_str(),
-            })
-        }
+        let parsed: (usize, usize, char, &str) = scan!("{}-{} {}: {}" <- line).unwrap();
+        passwords.push(PasswordRule {
+            lower: parsed.0,
+            upper: parsed.1,
+            letter: parsed.2,
+            password: parsed.3,
+        })
     }
     Ok(passwords)
 }
