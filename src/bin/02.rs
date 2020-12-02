@@ -4,24 +4,24 @@ use std::time::Instant;
 extern crate lazy_static;
 
 #[derive(Debug, Eq, PartialEq)]
-struct PasswordRule {
+struct PasswordRule<'a> {
     lower: usize,
     upper: usize,
     letter: char,
-    password: String,
+    password: &'a str,
 }
 
-impl PasswordRule {
-    fn is_valid(&self) -> bool {
+impl PasswordRule<'_> {
+    fn is_valid1(&self) -> bool {
         let num_instances = self.password.chars().filter(|&c| c == self.letter).count();
-        self.lower <= num_instances && num_instances <= self.upper
+        (self.lower..=self.upper).contains(&num_instances)
     }
 
     fn is_valid2(&self) -> bool {
         // Exactly one of the numbered positions must correspond to the
         // letter, so use the XOR operator, ^.
-        (self.password.chars().nth(self.lower - 1).unwrap() == self.letter)
-            ^ (self.password.chars().nth(self.upper - 1).unwrap() == self.letter)
+        (self.password.chars().nth(self.lower - 1) == Some(self.letter))
+            ^ (self.password.chars().nth(self.upper - 1) == Some(self.letter))
     }
 }
 
@@ -43,14 +43,14 @@ fn parse_input(input: &str) -> Result<Vec<PasswordRule>, Box<dyn std::error::Err
                 .unwrap();
     }
 
-    let mut passwords: Vec<PasswordRule> = vec![];
+    let mut passwords: Vec<PasswordRule> = Vec::new();
     for line in input.lines() {
         if let Some(caps) = PASSWORD_REGEX.captures(line) {
             passwords.push(PasswordRule {
                 lower: caps.name("lower").unwrap().as_str().parse()?,
                 upper: caps.name("upper").unwrap().as_str().parse()?,
                 letter: caps.name("letter").unwrap().as_str().parse()?,
-                password: caps.name("password").unwrap().as_str().to_string(),
+                password: caps.name("password").unwrap().as_str(),
             })
         }
     }
@@ -58,7 +58,7 @@ fn parse_input(input: &str) -> Result<Vec<PasswordRule>, Box<dyn std::error::Err
 }
 
 fn part_one(passwords: &[PasswordRule]) -> usize {
-    passwords.iter().filter(|p| p.is_valid()).count()
+    passwords.iter().filter(|p| p.is_valid1()).count()
 }
 
 fn part_two(passwords: &[PasswordRule]) -> usize {
@@ -75,19 +75,19 @@ fn test_examples() {
             lower: 1,
             upper: 3,
             letter: 'a',
-            password: "abcde".to_string(),
+            password: "abcde",
         },
         PasswordRule {
             lower: 1,
             upper: 3,
             letter: 'b',
-            password: "cdefg".to_string(),
+            password: "cdefg",
         },
         PasswordRule {
             lower: 2,
             upper: 9,
             letter: 'c',
-            password: "ccccccccc".to_string(),
+            password: "ccccccccc",
         },
     ];
     assert_eq!(parse_input(&input).unwrap(), expected);
