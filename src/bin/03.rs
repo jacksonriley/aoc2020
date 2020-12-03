@@ -27,14 +27,7 @@ impl TreeMap {
         // |----> x
         // v y
         let row = self.trees.get(y).unwrap();
-        let mut x = x;
-        loop {
-            if x < row.len() {
-                return *row.get(x).unwrap();
-            } else {
-                x -= row.len()
-            }
-        }
+        *row.get(x % row.len()).unwrap()
     }
 
     fn count_trees(&self, y_step: usize, x_step: usize) -> usize {
