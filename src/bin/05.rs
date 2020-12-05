@@ -6,10 +6,8 @@ fn get_seat_id(input: &str) -> u16 {
     input
         .chars()
         .map(|c| match c {
-            'F' => 0,
-            'B' => 1,
-            'L' => 0,
-            'R' => 1,
+            'F' | 'L' => 0,
+            'B' | 'R' => 1,
             _ => unreachable!(),
         })
         .fold(0, |acc, digit| acc * 2 + digit)
