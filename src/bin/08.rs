@@ -7,7 +7,7 @@ use std::time::Instant;
 enum Instruction {
     Jump(isize),
     Acc(i32),
-    Noop,
+    Noop(isize),
 }
 
 enum ProgramHalt {
@@ -31,7 +31,7 @@ impl FromStr for Program {
             match parts.next().unwrap() {
                 "jmp" => instructions.push(Instruction::Jump(parts.next().unwrap().parse()?)),
                 "acc" => instructions.push(Instruction::Acc(parts.next().unwrap().parse()?)),
-                "nop" => instructions.push(Instruction::Noop),
+                "nop" => instructions.push(Instruction::Noop(parts.next().unwrap().parse()?)),
                 _ => panic!("Got unexpected instruction: {}!", line),
             }
         }
@@ -62,7 +62,7 @@ impl Program {
                     self.accumulator += acc_size;
                     self.program_counter += 1;
                 }
-                Instruction::Noop => self.program_counter += 1,
+                Instruction::Noop(_) => self.program_counter += 1,
             }
         }
         ProgramHalt::Loop(self.accumulator)
@@ -74,6 +74,7 @@ fn main() -> Result<(), std::io::Error> {
     let input = std::fs::read_to_string("input/08")?;
     let program = parse_input(&input);
     println!("Part 1: {}", part_one(&program));
+    println!("Part 2: {}", part_two(&program));
     println!("Time: {}µs", now.elapsed().as_micros());
     Ok(())
 }
@@ -89,6 +90,27 @@ fn part_one(program: &Program) -> i32 {
     }
 }
 
+fn part_two(program: &Program) -> i32 {
+    // Loop through all of the instructions.
+    // Each time it's a Jump or a Noop, switch them and try running.
+    // If the program exits normally, return the accumulated value.
+    // Otherwise, continue
+    for (i, inst) in program.instructions.iter().enumerate() {
+        let modified = match inst {
+            Instruction::Acc(_) => continue,
+            Instruction::Jump(val) => Instruction::Noop(*val),
+            Instruction::Noop(val) => Instruction::Jump(*val),
+        };
+        let mut clone = program.clone();
+        clone.instructions[i] = modified;
+        match clone.run() {
+            ProgramHalt::Loop(_) => continue,
+            ProgramHalt::NormalExit(ans) => return ans,
+        }
+    }
+    unreachable!();
+}
+
 #[test]
 fn test_examples() {
     let input = "nop +0
@@ -102,4 +124,5 @@ jmp -4
 acc +6";
     let program = parse_input(&input);
     assert_eq!(part_one(&program), 5);
+    assert_eq!(part_two(&program), 8);
 }
