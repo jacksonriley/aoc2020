@@ -59,7 +59,7 @@ fn part_two(numbers: &[u64]) -> u64 {
         }
     }
     // We're done - return the min + max of the interval
-    let min = numbers[lower..upper].iter().min().unwrap();
-    let max = numbers[lower..upper].iter().max().unwrap();
+    let min = numbers[lower..=upper].iter().min().unwrap();
+    let max = numbers[lower..=upper].iter().max().unwrap();
     min + max
 }
