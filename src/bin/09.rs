@@ -8,6 +8,7 @@ fn main() -> Result<(), std::io::Error> {
     let input = std::fs::read_to_string("input/09")?;
     let numbers = parse_input(&input);
     println!("Part 1: {}", part_one(&numbers));
+    println!("Part 2: {}", part_two(&numbers));
     println!("Time: {}µs", now.elapsed().as_micros());
     Ok(())
 }
@@ -37,6 +38,21 @@ fn part_one(numbers: &[u64]) -> u64 {
 
 fn part_two(numbers: &[u64]) -> u64 {
     let target = part_one(numbers);
-    // Should do something based on indexes I guess
-    todo!()
+    let mut sum: u64;
+    for i in 0..numbers.len() {
+        sum = numbers[i];
+        for j in (i + 1)..numbers.len() {
+            sum += numbers[j];
+            if sum > target {
+                // Too big, start again
+                break;
+            } else if sum < target {
+                // Maybe this is the one
+                continue;
+            } else {
+                return numbers[i..=j].iter().min().unwrap() + numbers[i..=j].iter().max().unwrap();
+            }
+        }
+    }
+    unreachable!();
 }
