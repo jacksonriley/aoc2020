@@ -37,22 +37,30 @@ fn part_one(numbers: &[u64]) -> u64 {
 }
 
 fn part_two(numbers: &[u64]) -> u64 {
+    // Because the numbers are all positive, we can iterate through with two
+    // indices, lower and upper, as follows:
+    //  * If the sum of numbers between lower and upper is too small, then
+    //     upper is guaranteed to be too low, so increase it.
+    //  * If the sum of numbers between lower and upper is too large, then
+    //     lower is guaranteed to be too low, so increase it.
     let target = part_one(numbers);
-    let mut sum: u64;
-    for i in 0..numbers.len() {
-        sum = numbers[i];
-        for j in (i + 1)..numbers.len() {
-            sum += numbers[j];
-            if sum > target {
-                // Too big, start again
-                break;
-            } else if sum < target {
-                // Maybe this is the one
-                continue;
-            } else {
-                return numbers[i..=j].iter().min().unwrap() + numbers[i..=j].iter().max().unwrap();
-            }
+    let mut lower: usize = 0;
+    let mut upper: usize = 1;
+    let mut sum: u64 = numbers[lower] + numbers[upper];
+    while sum!= target {
+        if sum < target {
+            // upper is too low
+            upper += 1;
+            sum += numbers[upper];
+        }
+        else {
+            // lower is too low
+            sum -= numbers[lower];
+            lower += 1;
         }
     }
-    unreachable!();
+    // We're done - return the min + max of the interval
+    let min = numbers[lower..upper].iter().min().unwrap();
+    let max = numbers[lower..upper].iter().max().unwrap();
+    min + max
 }
