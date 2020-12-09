@@ -48,9 +48,9 @@ fn check_valid2(passport: &HashMap<&str, &str>) -> bool {
                 }
             }
             "hcl" => {
-                if v.starts_with('#') {
+                if let Some(stripped) = v.strip_prefix('#') {
                     v.len() == 7
-                        && v[1..]
+                        && stripped
                             .chars()
                             .filter(|c| {
                                 c.is_numeric() || ['a', 'b', 'c', 'd', 'e', 'f'].contains(&c)

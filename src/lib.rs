@@ -13,9 +13,9 @@ impl Iterator for AllPos<'_> {
         {
             Some(new_pos) => {
                 self.position += new_pos + 1;
-                return Some(self.position - 1);
+                Some(self.position - 1)
             }
-            None => return None,
+            None => None,
         }
     }
 }

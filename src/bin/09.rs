@@ -47,13 +47,12 @@ fn part_two(numbers: &[u64]) -> u64 {
     let mut lower: usize = 0;
     let mut upper: usize = 1;
     let mut sum: u64 = numbers[lower] + numbers[upper];
-    while sum!= target {
+    while sum != target {
         if sum < target {
             // upper is too low
             upper += 1;
             sum += numbers[upper];
-        }
-        else {
+        } else {
             // lower is too low
             sum -= numbers[lower];
             lower += 1;

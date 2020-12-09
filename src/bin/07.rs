@@ -31,7 +31,7 @@ fn parse_input(input: &str) -> (Bags, ParentBags) {
             for child in children_str.split(", ") {
                 let mut space_positions = find_all_positions(child, ' ');
                 let num_pos: usize = space_positions.next().unwrap();
-                let post_iden: usize = space_positions.skip(1).next().unwrap();
+                let post_iden: usize = space_positions.nth(1).unwrap();
                 let num: u32 = child[..num_pos].parse().unwrap();
                 let iden = &child[(num_pos + 1)..post_iden];
                 children.insert((num, iden));
