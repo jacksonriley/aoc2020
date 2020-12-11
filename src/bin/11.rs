@@ -60,8 +60,10 @@ impl FromStr for SeatMap {
 }
 
 impl SeatMap {
-    fn tick(&mut self, part: Part) {
+    fn tick(&mut self, part: Part) -> bool {
         // Apply the evolution rules once to every position and update self.
+        // Return whether or not the map changed.
+        let mut changed = false;
         let mut new_seat_map: Seats = Vec::new();
         for r in 0..self.rows {
             let mut new_row = Vec::new();
@@ -70,11 +72,15 @@ impl SeatMap {
                     Part1 => self.evolve1(r, c),
                     Part2 => self.evolve2(r, c),
                 };
+                if !changed && new_seat != self.seats[r][c] {
+                    changed = true;
+                }
                 new_row.push(new_seat);
             }
             new_seat_map.push(new_row);
         }
         self.seats = new_seat_map;
+        changed
     }
 
     fn evolve1(&mut self, row: usize, col: usize) -> Position {
@@ -186,11 +192,8 @@ fn parse_input(input: &str) -> SeatMap {
 
 fn run_part(seat_map: &SeatMap, part: Part) -> usize {
     let mut clone = seat_map.clone();
-    let mut old_seats = clone.seats.clone();
-    clone.tick(part);
-    while clone.seats != old_seats {
-        old_seats = clone.seats.clone();
-        clone.tick(part);
+    while clone.tick(part) {
+        continue;
     }
     clone
         .seats
