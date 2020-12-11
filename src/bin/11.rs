@@ -1,6 +1,17 @@
 use std::str::FromStr;
 use std::time::Instant;
 
+const DIRECTIONS: [(isize, isize); 8] = [
+    (1, 0),
+    (0, 1),
+    (1, 1),
+    (-1, -1),
+    (-1, 0),
+    (0, -1),
+    (-1, 1),
+    (1, -1),
+];
+
 #[derive(Copy, Clone)]
 enum Part {
     Part1,
@@ -16,6 +27,7 @@ enum Position {
     Empty,
     Occupied,
 }
+use Position::*;
 
 #[derive(PartialEq, Clone)]
 struct SeatMap {
@@ -33,9 +45,9 @@ impl FromStr for SeatMap {
             let row = line
                 .chars()
                 .map(|c| match c {
-                    '.' => Ok(Position::Floor),
-                    'L' => Ok(Position::Empty),
-                    '#' => Ok(Position::Occupied),
+                    '.' => Ok(Floor),
+                    'L' => Ok(Empty),
+                    '#' => Ok(Occupied),
                     _ => Err(format!("Got bad character {}", c)),
                 })
                 .collect::<Result<Vec<Position>, Self::Err>>()?;
@@ -67,26 +79,26 @@ impl SeatMap {
 
     fn evolve1(&mut self, row: usize, col: usize) -> Position {
         match self.seats[row][col] {
-            Position::Floor => Position::Floor,
-            Position::Empty => {
+            Floor => Floor,
+            Empty => {
                 // If a seat is empty (L) and there are no occupied
                 // seats adjacent to it, the seat becomes occupied.
-                if self.get_occ_neighbours(row, col) == 0 {
-                    Position::Occupied
+                if self.get_occ_neighbours(row as isize, col as isize) == 0 {
+                    Occupied
                 } else {
                     // Otherwise, the seat's state does not change.
-                    Position::Empty
+                    Empty
                 }
             }
-            Position::Occupied => {
+            Occupied => {
                 // If a seat is occupied (#) and four or more seats
                 // adjacent to it are also occupied, the seat becomes
                 // empty.
-                if self.get_occ_neighbours(row, col) >= 4 {
-                    Position::Empty
+                if self.get_occ_neighbours(row as isize, col as isize) >= 4 {
+                    Empty
                 } else {
                     // Otherwise, the seat's state does not change.
-                    Position::Occupied
+                    Occupied
                 }
             }
         }
@@ -94,69 +106,44 @@ impl SeatMap {
 
     fn evolve2(&mut self, row: usize, col: usize) -> Position {
         match self.seats[row][col] {
-            Position::Floor => Position::Floor,
-            Position::Empty => {
+            Floor => Floor,
+            Empty => {
                 // If a seat is empty (L) and there are no occupied
                 // seats in view, the seat becomes occupied.
-                if self.get_occ_neighbours_sightline(row, col) == 0 {
-                    Position::Occupied
+                if self.get_occ_neighbours_sightline(row as isize, col as isize) == 0 {
+                    Occupied
                 } else {
                     // Otherwise, the seat's state does not change.
-                    Position::Empty
+                    Empty
                 }
             }
-            Position::Occupied => {
+            Occupied => {
                 // If a seat is occupied (#) and five or more seats
                 // in view are also occupied, the seat becomes empty.
-                if self.get_occ_neighbours_sightline(row, col) >= 5 {
-                    Position::Empty
+                if self.get_occ_neighbours_sightline(row as isize, col as isize) >= 5 {
+                    Empty
                 } else {
                     // Otherwise, the seat's state does not change.
-                    Position::Occupied
+                    Occupied
                 }
             }
         }
     }
 
-    fn get_occ_neighbours(&self, row: usize, col: usize) -> usize {
+    fn get_occ_neighbours(&self, row: isize, col: isize) -> usize {
         // Return the number of occupied neighbours
-        let row_i = row as isize;
-        let col_i = col as isize;
-        let directions = [
-            (1, 0),
-            (0, 1),
-            (1, 1),
-            (-1, -1),
-            (-1, 0),
-            (0, -1),
-            (-1, 1),
-            (1, -1),
-        ];
-        directions
+        DIRECTIONS
             .iter()
-            .map(|p| (p.0 + row_i, p.1 + col_i))
-            .filter(|p| self.in_bounds(*p))
-            .filter(|valid| self.seats[valid.0 as usize][valid.1 as usize] == Position::Occupied)
+            .map(|p| (p.0 + row, p.1 + col))
+            .filter(|p| self.in_bounds(*p) && self.seats[p.0 as usize][p.1 as usize] == Occupied)
             .count()
     }
 
-    fn get_occ_neighbours_sightline(&self, row: usize, col: usize) -> usize {
+    fn get_occ_neighbours_sightline(&self, row: isize, col: isize) -> usize {
         // Return the number of visible occupied seats in any direction
-        let row_i = row as isize;
-        let col_i = col as isize;
-        let directions = [
-            (1, 0),
-            (0, 1),
-            (1, 1),
-            (-1, -1),
-            (-1, 0),
-            (0, -1),
-            (-1, 1),
-            (1, -1),
-        ];
-        directions
+        DIRECTIONS
             .iter()
-            .filter(|&d| self.occ_in_sightline(row_i, col_i, *d))
+            .filter(|&d| self.occ_in_sightline(row, col, *d))
             .count()
     }
 
@@ -165,9 +152,9 @@ impl SeatMap {
         let mut new_pos = (row + direction.0, col + direction.1);
         while self.in_bounds(new_pos) {
             match self.seats[new_pos.0 as usize][new_pos.1 as usize] {
-                Position::Occupied => return true,
-                Position::Empty => return false,
-                Position::Floor => {}
+                Occupied => return true,
+                Empty => return false,
+                Floor => {}
             }
             new_pos = (new_pos.0 + direction.0, new_pos.1 + direction.1);
         }
@@ -176,7 +163,10 @@ impl SeatMap {
 
     fn in_bounds(&self, point: (isize, isize)) -> bool {
         // Return whether or not the given point is within the bounds of the seating area
-        point.0 >= 0 && (point.0 as usize) < self.rows && point.1 >= 0 && (point.1 as usize) < self.cols
+        point.0 >= 0
+            && (point.0 as usize) < self.rows
+            && point.1 >= 0
+            && (point.1 as usize) < self.cols
     }
 }
 
@@ -206,7 +196,7 @@ fn run_part(seat_map: &SeatMap, part: Part) -> usize {
         .seats
         .iter()
         .flatten()
-        .filter(|&s| s == &Position::Occupied)
+        .filter(|&s| s == &Occupied)
         .count()
 }
 
