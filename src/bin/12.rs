@@ -7,7 +7,7 @@ enum Part {
 }
 use Part::*;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Action {
     // Movements
     MoveForward(i32),
