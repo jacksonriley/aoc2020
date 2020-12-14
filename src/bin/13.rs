@@ -38,14 +38,11 @@ fn parse_input(input: &str) -> (u64, Vec<Bus>) {
         .next()
         .unwrap()
         .split(',')
-        .scan(0, |state, s| {
-            *state += 1;
-            Some((s, *state - 1))
-        })
-        .filter(|s| s.0 != "x")
+        .enumerate()
+        .filter(|s| s.1 != "x")
         .map(|n| Bus {
-            number: n.0.parse::<u64>().unwrap(),
-            offset: n.1,
+            number: n.1.parse::<u64>().unwrap(),
+            offset: n.0 as u64,
         })
         .collect();
     (earliest, buses)
@@ -64,26 +61,18 @@ fn part_one(earliest: u64, buses: &[Bus]) -> u64 {
 }
 
 fn part_two(buses: &[Bus]) -> u64 {
-    // Want to find the first time t such that for each bus b, t + b.offset is
-    // a multiple of b.number
-    // For example, find 7x = T, 13y = (T+1)
-    // Check multiples of 7 and check if T+1 is a multiple of 13
-    // Find t'
-    // Next, need 59z = (T+4)
-    // Have 7x = t', 13y = t' + 1, but still need 7x = T, 13y = (T+1)
-    // So T is t' + W
-    // 7x = t' + W, 13y = t' + 1 + W
-    // Once we have t', how can we find more?
-    // W just has to be a multiple of 7 and 13! Then our first two conditions still hold!
-    // We can therefore try adding multiples of LCM(7, 13) to find 59x = t' + mW + 4
-    // Once found, t' + mW becomes our new t', and we then search for the next one using LCM(7, 13, 59).
+    // Want to find the first time t such that for each bus b, (t + b.offset) % b.number == 0.
+    // Do this pair-wise - once we find a suitable t for two buses, we can
+    // search for a suitable t for three buses in increments of LCM(bus1, bus2).
+    // This guarantees that when we satisfy the third constraint, the first two
+    // will still be satisfied. Repeat.
     let mut t = 1;
-    let mut jump = 1;
+    let mut increment = 1;
     for b in buses.iter() {
         while (t + b.offset) % (b.number) != 0 {
-            t += jump;
+            t += increment;
         }
-        jump = lcm(jump, b.number);
+        increment = lcm(increment, b.number);
     }
     t
 }
