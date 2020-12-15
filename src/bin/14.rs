@@ -21,6 +21,7 @@ fn main() -> Result<(), std::io::Error> {
     let input = std::fs::read_to_string("input/14")?;
     let commands = parse_input(&input);
     println!("Part 1: {}", part_one(&commands));
+    println!("Time: {}µs", now.elapsed().as_micros());
     println!("Part 2: {}", part_two(&commands));
     println!("Time: {}µs", now.elapsed().as_micros());
     Ok(())
@@ -71,28 +72,32 @@ fn masked1(mut value: u64, mask: &HashMap<usize, MaskVal>) -> u64 {
     value
 }
 
-fn masked2(mut value: u64, mask: &HashMap<usize, MaskVal>) -> HashSet<u64> {
+fn masked2(mut value: u64, mask: &HashMap<usize, MaskVal>) -> Vec<u64> {
     // First, do all of the MaskVal::One bit sets, as these can all be done on one value.
-    let mut set = HashSet::new();
+    // Also set all of the MashVal::X bits to 1.
+    let mut addresses = Vec::new();
     for (k, v) in mask.iter() {
-        if let MaskVal::One = v {
-            // Set that bit to 1
-            value |= 1 << k
-        }
-    }
-    // Next do the floating bit stuff
-    set.insert(value);
-    for (k, v) in mask.iter() {
-        if let MaskVal::X = v {
-            let mut new_set = HashSet::new();
-            for addr in set.iter() {
-                new_set.insert(addr | 1 << k);
-                new_set.insert(addr & !(1 << k));
+        match v {
+            MaskVal::One | MaskVal::X => {
+                // Set that bit to 1
+                value |= 1 << k
             }
-            set = new_set;
+            _ => {}
         }
     }
-    set
+    // Next do the floating bit stuff - for each address in the vector, add
+    // one with the X bit switched to 0.
+    addresses.push(value);
+    for (k, v) in mask.iter() {
+        let mut new_addresses = Vec::new();
+        if let MaskVal::X = v {
+            for addr in addresses.iter() {
+                new_addresses.push(addr & !(1 << k));
+            }
+        }
+        addresses.extend(new_addresses.into_iter());
+    }
+    addresses
 }
 
 fn part_one(commands: &[Command]) -> u64 {
