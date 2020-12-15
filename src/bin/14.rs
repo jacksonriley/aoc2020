@@ -20,9 +20,7 @@ fn main() -> Result<(), std::io::Error> {
     let now = Instant::now();
     let input = std::fs::read_to_string("input/14")?;
     let commands = parse_input(&input);
-    println!("Time: {}µs", now.elapsed().as_micros());
     println!("Part 1: {}", part_one(&commands));
-    println!("Time: {}µs", now.elapsed().as_micros());
     println!("Part 2: {}", part_two(&commands));
     println!("Time: {}µs", now.elapsed().as_micros());
     Ok(())
@@ -136,17 +134,9 @@ fn part_two(commands: &[Command]) -> u64 {
                 curr_masks = calculate_masks(mask);
             }
             Command::Mem((addr, val)) => {
-                let now = Instant::now();
                 for masked_addr in masked2(*addr, &curr_masks).iter() {
                     memory.insert(*masked_addr, *val);
                 }
-                println!(
-                    "Mask time: {}µs\n Masks {:?}\n Addr {}\n Val {}\n",
-                    now.elapsed().as_micros(),
-                    curr_masks,
-                    addr,
-                    val
-                );
             }
         }
     }
