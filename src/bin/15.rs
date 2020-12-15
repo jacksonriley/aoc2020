@@ -1,5 +1,7 @@
-use std::collections::HashMap;
 use std::time::Instant;
+
+const TARGET1: usize = 2020;
+const TARGET2: usize = 30_000_000;
 
 fn main() -> Result<(), std::io::Error> {
     let now = Instant::now();
@@ -22,25 +24,27 @@ fn get_nth(start: &[usize], n: usize) -> usize {
     // On each iteration, we need
     //  * the number to consider
     //  * the last turn on which each number was seen.
-    let mut last_turn: HashMap<usize, usize> = start
+    let mut last_turn: Vec<usize> = vec![0; n];
+    for (val, turn) in start
         .iter()
         .cloned()
         .enumerate()
         .map(|(i, v)| (v, i + 1))
         .rev()
         .skip(1)
-        .collect();
+    {
+        last_turn[val] = turn;
+    }
     let mut to_consider = *start.last().unwrap();
     for i in start.len() + 1..=n {
-        match last_turn.get(&to_consider) {
-            Some(turn) => {
-                let turn = *turn;
-                last_turn.insert(to_consider, i - 1);
-                to_consider = i - turn - 1;
-            }
-            None => {
-                last_turn.insert(to_consider, i - 1);
+        match last_turn[to_consider] {
+            0 => {
+                last_turn[to_consider] = i - 1;
                 to_consider = 0;
+            }
+            turn => {
+                last_turn[to_consider] = i - 1;
+                to_consider = i - turn - 1;
             }
         }
     }
@@ -48,11 +52,11 @@ fn get_nth(start: &[usize], n: usize) -> usize {
 }
 
 fn part_one(start: &[usize]) -> usize {
-    get_nth(start, 2020)
+    get_nth(start, TARGET1)
 }
 
 fn part_two(start: &[usize]) -> usize {
-    get_nth(start, 30_000_000)
+    get_nth(start, TARGET2)
 }
 
 #[test]
