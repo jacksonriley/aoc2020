@@ -60,7 +60,7 @@ fn part_two(start: &[usize]) -> usize {
 }
 
 #[test]
-fn test_examples() {
+fn test_part_one_examples() {
     let input = "0,3,6";
     let starting_numbers = parse_input(&input);
     assert_eq!(part_one(&starting_numbers), 436);
@@ -82,7 +82,13 @@ fn test_examples() {
 
     let starting_numbers = vec![3, 1, 2];
     assert_eq!(part_one(&starting_numbers), 1836);
+}
 
+#[test]
+#[ignore]
+fn test_part_two_examples() {
+    // This test takes a while to run, so is ignored.
+    // It can be run `cargo test -- --ignored`
     let starting_numbers = vec![0, 3, 6];
     assert_eq!(part_two(&starting_numbers), 175594);
 
