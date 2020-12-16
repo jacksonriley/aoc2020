@@ -3,13 +3,12 @@ use std::time::Instant;
 #[macro_use]
 extern crate serde_scan;
 
-type Ranges = ((u32, u32), (u32, u32));
-
 #[derive(Debug)]
 struct AllInfo {
-    keys: HashMap<String, Ranges>,
+    keys: HashMap<String, HashSet<u32>>,
     our_ticket: Vec<u32>,
     nearby_tickets: Vec<Vec<u32>>,
+    all_valid_values: HashSet<u32>,
 }
 
 fn main() -> Result<(), std::io::Error> {
@@ -22,7 +21,7 @@ fn main() -> Result<(), std::io::Error> {
 }
 
 fn parse_input(input: &str) -> AllInfo {
-    let mut keys: HashMap<String, Ranges> = HashMap::new();
+    let mut keys: HashMap<String, HashSet<u32>> = HashMap::new();
     let our_ticket: Vec<u32>;
     let mut nearby_tickets: Vec<Vec<u32>> = Vec::new();
 
@@ -34,7 +33,14 @@ fn parse_input(input: &str) -> AllInfo {
         let parse_result: Result<(&str, u32, u32, u32, u32), _> =
             scan!("{}: {}-{} or {}-{}" <- line);
         let vals = parse_result.unwrap();
-        keys.insert(vals.0.to_string(), ((vals.1, vals.2), (vals.3, vals.4)));
+        let mut set = HashSet::new();
+        for v in vals.1..=vals.2 {
+            set.insert(v);
+        }
+        for v in vals.3..=vals.4 {
+            set.insert(v);
+        }
+        keys.insert(vals.0.to_string(), set);
         line = lines.next().unwrap()
     }
 
@@ -50,28 +56,24 @@ fn parse_input(input: &str) -> AllInfo {
         nearby_tickets.push(l.split(',').map(|n| n.parse().unwrap()).collect());
     }
 
+    let all_valid_values: HashSet<u32> = keys
+        .values()
+        .fold(HashSet::new(), |acc, s| acc.union(&s).cloned().collect());
+
     AllInfo {
         keys,
         our_ticket,
         nearby_tickets,
+        all_valid_values,
     }
 }
 
 fn part_one(all_info: &AllInfo) -> u32 {
-    let mut all_valid_values = HashSet::new();
-    for &((l1, u1), (l2, u2)) in all_info.keys.values() {
-        for v in l1..=u1 {
-            all_valid_values.insert(v);
-        }
-        for v in l2..=u2 {
-            all_valid_values.insert(v);
-        }
-    }
     all_info
         .nearby_tickets
         .iter()
         .flatten()
-        .filter(|v| !all_valid_values.contains(v))
+        .filter(|v| !all_info.all_valid_values.contains(v))
         .sum()
 }
 
