@@ -17,9 +17,7 @@ fn main() -> Result<(), std::io::Error> {
     let now = Instant::now();
     let input = std::fs::read_to_string("input/16")?;
     let all_info = parse_input(&input);
-    println!("Time: {}µs", now.elapsed().as_micros());
     println!("Part 1: {}", part_one(&all_info));
-    println!("Time: {}µs", now.elapsed().as_micros());
     println!("Part 2: {}", part_two(&all_info));
     println!("Time: {}µs", now.elapsed().as_micros());
     Ok(())
@@ -85,9 +83,6 @@ fn part_one(all_info: &AllInfo) -> u32 {
 
 fn part_two(all_info: &AllInfo) -> u64 {
     let mut col_to_field: HashMap<usize, FieldName> = HashMap::new();
-    let mut cannot_be: HashMap<usize, HashSet<FieldName>> = HashMap::new();
-    let all_fields: HashSet<FieldName> = all_info.fields.keys().cloned().collect();
-
     let valid_tickets: Vec<Vec<u32>> = all_info
         .nearby_tickets
         .iter()
@@ -95,6 +90,10 @@ fn part_two(all_info: &AllInfo) -> u64 {
         .filter(|t| t.iter().all(|v| all_info.all_valid_values.contains(v)))
         .collect();
     let mut to_consider: HashSet<usize> = (0..valid_tickets[0].len()).collect();
+    let mut possible_mappings: HashMap<usize, HashSet<FieldName>> = to_consider
+        .iter()
+        .map(|i| (*i, all_info.fields.keys().cloned().collect()))
+        .collect();
 
     // For each column of ticket values, if any are not in the set of
     // possible values for a given field, this column cannot map to the
@@ -106,34 +105,25 @@ fn part_two(all_info: &AllInfo) -> u64 {
                 .map(|v| v[*i])
                 .any(|f| !map.contains(&f))
             {
-                cannot_be
-                    .entry(*i)
-                    .or_insert_with(HashSet::new)
-                    .insert(key.clone());
+                possible_mappings.get_mut(i).unwrap().remove(key);
             }
         }
     }
 
-    // While there are columns that we haven't solved, check if any have ruled
-    // out all but one field. If they have, then
+    // While there are columns that we haven't solved, check if any have only
+    // one possible field. If they have, then
     //  * rule out this field for all other columns
     //  * add the new correct mapping to col_to_field
     //  * remove the column from consideration
-
     while !to_consider.is_empty() {
         for i in to_consider.iter() {
-            if let Some(s) = cannot_be.get(&i) {
-                if s.len() == all_fields.len() - 1 {
-                    let i_key: HashSet<FieldName> = all_fields.difference(s).cloned().collect();
-                    let ans = i_key.iter().next().unwrap().to_string();
-                    for j in to_consider.iter() {
-                        cannot_be
-                            .entry(*j)
-                            .or_insert_with(HashSet::new)
-                            .insert(ans.clone());
-                    }
-                    col_to_field.insert(*i, ans);
+            let s = possible_mappings.get(i).unwrap();
+            if s.len() == 1 {
+                let ans = s.iter().next().unwrap().to_string();
+                for j in to_consider.iter() {
+                    possible_mappings.get_mut(j).unwrap().remove(&ans);
                 }
+                col_to_field.insert(*i, ans);
             }
         }
         for i in col_to_field.keys() {
