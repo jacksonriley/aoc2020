@@ -14,11 +14,8 @@ fn parse_input(input: &str) -> HashSet<(usize, usize)> {
     let mut initial_active = HashSet::new();
     for (y, line) in input.lines().enumerate() {
         for (x, c) in line.chars().enumerate() {
-            match c {
-                '#' => {
-                    initial_active.insert((x, y));
-                }
-                _ => {}
+            if let '#' = c {
+                initial_active.insert((x, y));
             }
         }
     }
@@ -48,16 +45,34 @@ impl ConwayCube {
             let inactive_neighbours: HashSet<Position> = self
                 .active
                 .iter()
-                .flat_map(|p| self.get_neighbours(p).iter())
-                .filter(|&n| !self.active.contains(n))
-                .cloned()
+                .flat_map(|p| self.get_neighbours(p).into_iter())
+                .filter(|n| !self.active.contains(n))
                 .collect();
+            for p in self.active.iter() {
+                // If a cube is active and exactly 2 or 3 of its neighbors are
+                // also active, the cube remains active. Otherwise, the cube
+                // becomes inactive.
+                let num_active_neighbours = self.get_num_active_neighbours(&p);
+                if num_active_neighbours == 2 || num_active_neighbours == 3 {
+                    new_active.insert(p.to_vec());
+                }
+            }
+            for p in inactive_neighbours {
+                // If a cube is inactive but exactly 3 of its neighbors are
+                // active, the cube becomes active. Otherwise, the cube remains
+                // inactive.
+                let num_active_neighbours = self.get_num_active_neighbours(&p);
+                if num_active_neighbours == 3 {
+                    new_active.insert(p);
+                }
+            }
+            self.active = new_active;
         }
 
         self.active.len()
     }
 
-    fn get_neighbours(&self, point: &Position) -> Vec<Position> {
+    fn get_neighbours(&self, point: &[i32]) -> Vec<Position> {
         let mut neighbours = Vec::new();
         for d in &self.directions {
             neighbours.push(vector_add(&point, &d));
@@ -65,11 +80,11 @@ impl ConwayCube {
         neighbours
     }
 
-    fn get_num_neighbours(&self, point: &Position, active: bool) -> usize {
+    fn get_num_active_neighbours(&self, point: &[i32]) -> usize {
         let neighbours = self.get_neighbours(point);
         neighbours
             .iter()
-            .filter(|&n| self.active.contains(n) == active)
+            .filter(|&n| self.active.contains(n))
             .count()
     }
 }
@@ -94,7 +109,7 @@ fn get_directions(dimension: usize) -> Vec<Position> {
     directions
 }
 
-fn vector_add(a: &Position, b: &Position) -> Position {
+fn vector_add(a: &[i32], b: &[i32]) -> Position {
     a.iter().zip(b.iter()).map(|(x, y)| x + y).collect()
 }
 
@@ -102,8 +117,9 @@ fn main() -> Result<(), std::io::Error> {
     let now = Instant::now();
     let input = std::fs::read_to_string("input/17")?;
     let initial = parse_input(&input);
-    println!("Initial: {:?}", initial);
+    println!("Time: {}µs", now.elapsed().as_micros());
     println!("Part 1: {}", part_one(&initial));
+    println!("Time: {}µs", now.elapsed().as_micros());
     println!("Part 2: {}", part_two(&initial));
     println!("Time: {}µs", now.elapsed().as_micros());
     Ok(())
@@ -111,13 +127,11 @@ fn main() -> Result<(), std::io::Error> {
 
 fn part_one(initial_active: &HashSet<(usize, usize)>) -> usize {
     let mut cube = ConwayCube::new(3, initial_active);
-    println!("Cube: {:?}", cube);
     cube.tick(6)
 }
 
 fn part_two(initial_active: &HashSet<(usize, usize)>) -> usize {
     let mut cube = ConwayCube::new(4, initial_active);
-    println!("Cube: {:?}", cube);
     cube.tick(6)
 }
 
@@ -128,4 +142,5 @@ fn test_examples() {
 ###";
     let initial = parse_input(input);
     assert_eq!(part_one(&initial), 112);
+    assert_eq!(part_two(&initial), 848);
 }
