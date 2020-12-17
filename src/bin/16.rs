@@ -3,11 +3,13 @@ use std::time::Instant;
 #[macro_use]
 extern crate serde_scan;
 
+type Ticket = Vec<u32>;
+type FieldName = String;
 #[derive(Debug)]
 struct AllInfo {
-    keys: HashMap<String, HashSet<u32>>,
-    our_ticket: Vec<u32>,
-    nearby_tickets: Vec<Vec<u32>>,
+    fields: HashMap<FieldName, HashSet<u32>>,
+    our_ticket: Ticket,
+    nearby_tickets: Vec<Ticket>,
     all_valid_values: HashSet<u32>,
 }
 
@@ -24,14 +26,14 @@ fn main() -> Result<(), std::io::Error> {
 }
 
 fn parse_input(input: &str) -> AllInfo {
-    let mut keys: HashMap<String, HashSet<u32>> = HashMap::new();
-    let our_ticket: Vec<u32>;
-    let mut nearby_tickets: Vec<Vec<u32>> = Vec::new();
+    let mut fields: HashMap<FieldName, HashSet<u32>> = HashMap::new();
+    let our_ticket: Ticket;
+    let mut nearby_tickets: Vec<Ticket> = Vec::new();
 
     let mut lines = input.lines();
     let mut line = lines.next().unwrap();
 
-    // Parse the keys
+    // Parse the fields
     while !line.trim().is_empty() {
         let parse_result: Result<(&str, u32, u32, u32, u32), _> =
             scan!("{}: {}-{} or {}-{}" <- line);
@@ -43,7 +45,7 @@ fn parse_input(input: &str) -> AllInfo {
         for v in vals.3..=vals.4 {
             set.insert(v);
         }
-        keys.insert(vals.0.to_string(), set);
+        fields.insert(vals.0.to_string(), set);
         line = lines.next().unwrap()
     }
 
@@ -59,12 +61,11 @@ fn parse_input(input: &str) -> AllInfo {
         nearby_tickets.push(l.split(',').map(|n| n.parse().unwrap()).collect());
     }
 
-    let all_valid_values: HashSet<u32> = keys
+    let all_valid_values: HashSet<u32> = fields
         .values()
         .fold(HashSet::new(), |acc, s| acc.union(&s).cloned().collect());
-
     AllInfo {
-        keys,
+        fields,
         our_ticket,
         nearby_tickets,
         all_valid_values,
@@ -72,6 +73,8 @@ fn parse_input(input: &str) -> AllInfo {
 }
 
 fn part_one(all_info: &AllInfo) -> u32 {
+    // Iterate through all of the ticket values and filter out any that are not
+    // in the set of valid values. Their sum is the ticket scanning error rate.
     all_info
         .nearby_tickets
         .iter()
@@ -81,21 +84,23 @@ fn part_one(all_info: &AllInfo) -> u32 {
 }
 
 fn part_two(all_info: &AllInfo) -> u64 {
-    let mut i_keys: HashMap<usize, String> = HashMap::new();
-    let all_keys: HashSet<String> = all_info.keys.keys().cloned().collect();
+    let mut col_to_field: HashMap<usize, FieldName> = HashMap::new();
+    let mut cannot_be: HashMap<usize, HashSet<FieldName>> = HashMap::new();
+    let all_fields: HashSet<FieldName> = all_info.fields.keys().cloned().collect();
+
     let valid_tickets: Vec<Vec<u32>> = all_info
         .nearby_tickets
         .iter()
         .cloned()
         .filter(|t| t.iter().all(|v| all_info.all_valid_values.contains(v)))
         .collect();
-
-    let mut cannot_be: HashMap<usize, HashSet<String>> = HashMap::new();
     let mut to_consider: HashSet<usize> = (0..valid_tickets[0].len()).collect();
-    let mut progress = true;
 
+    // For each column of ticket values, if any are not in the set of
+    // possible values for a given field, this column cannot map to the
+    // given field, so rule that field out for that column.
     for i in to_consider.iter() {
-        for (key, map) in all_info.keys.iter() {
+        for (key, map) in all_info.fields.iter() {
             if valid_tickets
                 .iter()
                 .map(|v| v[*i])
@@ -103,39 +108,43 @@ fn part_two(all_info: &AllInfo) -> u64 {
             {
                 cannot_be
                     .entry(*i)
-                    .or_insert(HashSet::new())
+                    .or_insert_with(HashSet::new)
                     .insert(key.clone());
             }
         }
     }
 
-    while progress {
-        progress = false;
+    // While there are columns that we haven't solved, check if any have ruled
+    // out all but one field. If they have, then
+    //  * rule out this field for all other columns
+    //  * add the new correct mapping to col_to_field
+    //  * remove the column from consideration
+
+    while !to_consider.is_empty() {
         for i in to_consider.iter() {
             if let Some(s) = cannot_be.get(&i) {
-                let i_key: HashSet<String> = all_keys.difference(s).cloned().collect();
-                if i_key.len() == 1 {
+                if s.len() == all_fields.len() - 1 {
+                    let i_key: HashSet<FieldName> = all_fields.difference(s).cloned().collect();
                     let ans = i_key.iter().next().unwrap().to_string();
-                    i_keys.insert(*i, ans.clone());
                     for j in to_consider.iter() {
                         cannot_be
                             .entry(*j)
-                            .or_insert(HashSet::new())
+                            .or_insert_with(HashSet::new)
                             .insert(ans.clone());
                     }
-                    progress = true
+                    col_to_field.insert(*i, ans);
                 }
             }
         }
-        for i in i_keys.keys() {
+        for i in col_to_field.keys() {
             to_consider.remove(i);
         }
     }
 
-    i_keys
+    col_to_field
         .iter()
-        .filter(|(_i, key)| key.starts_with("departure"))
-        .map(|(i, _key)| all_info.our_ticket[*i] as u64)
+        .filter(|(_col, field)| field.starts_with("departure"))
+        .map(|(col, _field)| all_info.our_ticket[*col] as u64)
         .product()
 }
 
