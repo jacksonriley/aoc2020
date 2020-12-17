@@ -16,6 +16,7 @@ fn main() -> Result<(), std::io::Error> {
     let input = std::fs::read_to_string("input/16")?;
     let all_info = parse_input(&input);
     println!("Part 1: {}", part_one(&all_info));
+    println!("Part 2: {}", part_two(&all_info));
     println!("Time: {}µs", now.elapsed().as_micros());
     Ok(())
 }
@@ -77,6 +78,68 @@ fn part_one(all_info: &AllInfo) -> u32 {
         .sum()
 }
 
+fn part_two(all_info: &AllInfo) -> u64 {
+    let mut i_keys: HashMap<usize, String> = HashMap::new();
+    let all_keys: HashSet<String> = all_info.keys.keys().cloned().collect();
+    let valid_tickets: Vec<Vec<u32>> = all_info
+        .nearby_tickets
+        .iter()
+        .cloned()
+        .filter(|t| t.iter().all(|v| all_info.all_valid_values.contains(v)))
+        .collect();
+    println!(
+        "All: {}, Valid: {}",
+        all_info.nearby_tickets.len(),
+        valid_tickets.len()
+    );
+
+    let mut cannot_be: HashMap<usize, HashSet<String>> = HashMap::new();
+    let mut to_consider: HashSet<usize> = (0..valid_tickets[0].len()).collect();
+    let mut progress = true;
+
+    while progress {
+        progress = false;
+        for i in to_consider.iter() {
+            for (key, map) in all_info.keys.iter() {
+                if !valid_tickets
+                    .iter()
+                    .map(|v| v[*i])
+                    .all(|f| map.contains(&f))
+                {
+                    // println!("i: {}, key {}", i, key);
+                    cannot_be
+                        .entry(*i)
+                        .or_insert(HashSet::new())
+                        .insert(key.clone());
+                }
+            }
+            if let Some(s) = cannot_be.get(&i) {
+                let i_key: HashSet<String> = all_keys.difference(s).cloned().collect();
+                if i_key.len() == 1 {
+                    let ans = i_key.iter().next().unwrap().to_string();
+                    i_keys.insert(*i, ans.clone());
+                    for j in to_consider.iter() {
+                        cannot_be
+                            .entry(*j)
+                            .or_insert(HashSet::new())
+                            .insert(ans.clone());
+                    }
+                    progress = true
+                }
+            }
+        }
+        for i in i_keys.keys() {
+            to_consider.remove(i);
+        }
+    }
+
+    i_keys
+        .iter()
+        .filter(|(_i, key)| key.starts_with("departure"))
+        .map(|(i, _key)| all_info.our_ticket[*i] as u64)
+        .product()
+}
+
 #[test]
 fn test_examples() {
     let input = "class: 1-3 or 5-7
@@ -93,4 +156,18 @@ nearby tickets:
 38,6,12";
     let all_info = parse_input(&input);
     assert_eq!(part_one(&all_info), 71);
+
+    let input = "class: 0-1 or 4-19
+departure row: 0-5 or 8-19
+seat: 0-13 or 16-19
+
+your ticket:
+11,12,13
+
+nearby tickets:
+3,9,18
+15,1,5
+5,14,9";
+    let all_info = parse_input(&input);
+    assert_eq!(part_two(&all_info), 11);
 }
