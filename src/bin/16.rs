@@ -15,7 +15,9 @@ fn main() -> Result<(), std::io::Error> {
     let now = Instant::now();
     let input = std::fs::read_to_string("input/16")?;
     let all_info = parse_input(&input);
+    println!("Time: {}µs", now.elapsed().as_micros());
     println!("Part 1: {}", part_one(&all_info));
+    println!("Time: {}µs", now.elapsed().as_micros());
     println!("Part 2: {}", part_two(&all_info));
     println!("Time: {}µs", now.elapsed().as_micros());
     Ok(())
@@ -87,32 +89,29 @@ fn part_two(all_info: &AllInfo) -> u64 {
         .cloned()
         .filter(|t| t.iter().all(|v| all_info.all_valid_values.contains(v)))
         .collect();
-    println!(
-        "All: {}, Valid: {}",
-        all_info.nearby_tickets.len(),
-        valid_tickets.len()
-    );
 
     let mut cannot_be: HashMap<usize, HashSet<String>> = HashMap::new();
     let mut to_consider: HashSet<usize> = (0..valid_tickets[0].len()).collect();
     let mut progress = true;
 
+    for i in to_consider.iter() {
+        for (key, map) in all_info.keys.iter() {
+            if valid_tickets
+                .iter()
+                .map(|v| v[*i])
+                .any(|f| !map.contains(&f))
+            {
+                cannot_be
+                    .entry(*i)
+                    .or_insert(HashSet::new())
+                    .insert(key.clone());
+            }
+        }
+    }
+
     while progress {
         progress = false;
         for i in to_consider.iter() {
-            for (key, map) in all_info.keys.iter() {
-                if !valid_tickets
-                    .iter()
-                    .map(|v| v[*i])
-                    .all(|f| map.contains(&f))
-                {
-                    // println!("i: {}, key {}", i, key);
-                    cannot_be
-                        .entry(*i)
-                        .or_insert(HashSet::new())
-                        .insert(key.clone());
-                }
-            }
             if let Some(s) = cannot_be.get(&i) {
                 let i_key: HashSet<String> = all_keys.difference(s).cloned().collect();
                 if i_key.len() == 1 {
