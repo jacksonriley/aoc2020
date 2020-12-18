@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
 type Position = Vec<i32>;
@@ -8,18 +8,6 @@ struct ConwayCube {
     dimension: usize,
     active: HashSet<Position>,
     directions: Vec<Position>,
-}
-
-fn parse_input(input: &str) -> HashSet<(usize, usize)> {
-    let mut initial_active = HashSet::new();
-    for (y, line) in input.lines().enumerate() {
-        for (x, c) in line.chars().enumerate() {
-            if let '#' = c {
-                initial_active.insert((x, y));
-            }
-        }
-    }
-    initial_active
 }
 
 impl ConwayCube {
@@ -42,28 +30,37 @@ impl ConwayCube {
     fn tick(&mut self, num_ticks: usize) -> usize {
         for _ in 0..num_ticks {
             let mut new_active: HashSet<Position> = HashSet::new();
-            let inactive_neighbours: HashSet<Position> = self
-                .active
+            let mut node_to_num_active: HashMap<Position, u32> = HashMap::new();
+            // For each active node, increase the count of all its neighbours
+            // by one - this is then the mapping of all nodes with one or more
+            // active neighbours to their active neighbour count
+            self.active
                 .iter()
-                .flat_map(|p| self.get_neighbours(p).into_iter())
-                .filter(|n| !self.active.contains(n))
-                .collect();
+                .map(|p| self.get_neighbours(p).into_iter())
+                .for_each(|neighbours| {
+                    for n in neighbours {
+                        *node_to_num_active.entry(n).or_insert(0) += 1;
+                    }
+                });
+
             for p in self.active.iter() {
-                // If a cube is active and exactly 2 or 3 of its neighbors are
+                // If a cube is active and exactly 2 or 3 of its neighbours are
                 // also active, the cube remains active. Otherwise, the cube
                 // becomes inactive.
-                let num_active_neighbours = self.get_num_active_neighbours(&p);
+                let num_active_neighbours = match node_to_num_active.get(p) {
+                    Some(num) => *num,
+                    None => 0,
+                };
                 if num_active_neighbours == 2 || num_active_neighbours == 3 {
                     new_active.insert(p.to_vec());
                 }
             }
-            for p in inactive_neighbours {
-                // If a cube is inactive but exactly 3 of its neighbors are
+            for (p, num_active) in node_to_num_active.iter() {
+                // If a cube is inactive but exactly 3 of its neighbours are
                 // active, the cube becomes active. Otherwise, the cube remains
                 // inactive.
-                let num_active_neighbours = self.get_num_active_neighbours(&p);
-                if num_active_neighbours == 3 {
-                    new_active.insert(p);
+                if !self.active.contains(p) && *num_active == 3 {
+                    new_active.insert(p.to_vec());
                 }
             }
             self.active = new_active;
@@ -78,14 +75,6 @@ impl ConwayCube {
             neighbours.push(vector_add(&point, &d));
         }
         neighbours
-    }
-
-    fn get_num_active_neighbours(&self, point: &[i32]) -> usize {
-        let neighbours = self.get_neighbours(point);
-        neighbours
-            .iter()
-            .filter(|&n| self.active.contains(n))
-            .count()
     }
 }
 
@@ -123,6 +112,18 @@ fn main() -> Result<(), std::io::Error> {
     println!("Part 2: {}", part_two(&initial));
     println!("Time: {}µs", now.elapsed().as_micros());
     Ok(())
+}
+
+fn parse_input(input: &str) -> HashSet<(usize, usize)> {
+    let mut initial_active = HashSet::new();
+    for (y, line) in input.lines().enumerate() {
+        for (x, c) in line.chars().enumerate() {
+            if let '#' = c {
+                initial_active.insert((x, y));
+            }
+        }
+    }
+    initial_active
 }
 
 fn part_one(initial_active: &HashSet<(usize, usize)>) -> usize {
