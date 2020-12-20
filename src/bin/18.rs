@@ -20,7 +20,10 @@ enum Token {
 }
 use Token::*;
 
-fn calculate_rpn(mut expression: Expression, op_precedence: HashMap<OpType, u8>) -> VecDeque<Token> {
+fn calculate_rpn(
+    mut expression: Expression,
+    op_precedence: HashMap<OpType, u8>,
+) -> VecDeque<Token> {
     // Use https://en.wikipedia.org/wiki/Shunting-yard_algorithm
     let mut output_queue: VecDeque<Token> = VecDeque::new();
     let mut op_stack: Vec<OpType> = Vec::new();
@@ -59,7 +62,7 @@ fn calculate_rpn(mut expression: Expression, op_precedence: HashMap<OpType, u8>)
 }
 
 fn evaluate_rpn(mut tokens: VecDeque<Token>) -> u64 {
-    let mut stack : Vec<u64> = Vec::new();
+    let mut stack: Vec<u64> = Vec::new();
     while !tokens.is_empty() {
         let tok = tokens.pop_front().unwrap();
         match tok {
@@ -68,7 +71,7 @@ fn evaluate_rpn(mut tokens: VecDeque<Token>) -> u64 {
                 let second = stack.pop().unwrap();
                 let first = stack.pop().unwrap();
                 match op {
-                    Plus => stack.push (first + second),
+                    Plus => stack.push(first + second),
                     Multiply => stack.push(first * second),
                     _ => panic!("Didn't exprect op {:?} in RPN!", op),
                 }
