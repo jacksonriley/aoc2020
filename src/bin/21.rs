@@ -53,9 +53,9 @@ fn parse_input(input: &str) -> Vec<Recipe> {
 
 fn get_allergenic_ingredients(recipes: &[Recipe]) -> HashMap<Ingredient, Allergen> {
     // Iterate through the recipes - for each allergen:
-    //  * if it has not been seen before, create a hashset of possible
-    //    ingredients that could contain it (only one does)
-    //  * if it has been seen before, union the set of possible ingredients
+    //  * if it has not been seen before, create a HashSet of possible
+    //    ingredients that could contain it (only one does).
+    //  * if it has been seen before, intersect the set of possible ingredients
     //    with the existing set.
     //  If this results in a set of only one ingredient, then we've solved
     //  that allergen -> ingredient mapping. Remove that ingredient from any
