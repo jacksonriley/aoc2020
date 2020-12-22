@@ -116,9 +116,7 @@ impl Tile {
 
     fn flip(&mut self) {
         // Flips left-right
-        for row in self.pixels.iter_mut() {
-            row.reverse();
-        }
+        flip_pixels(&mut self.pixels);
 
         // Also flip the sides - as we're flipping left-right, this means that
         // Top becomes Top reverse
@@ -126,16 +124,25 @@ impl Tile {
         // Bottom becomes Bottom reverse
         // Left becomes Right reverse
         self.sides = [
-            self.sides[0].reverse_bits() >> 6,
-            self.sides[3].reverse_bits() >> 6,
-            self.sides[2].reverse_bits() >> 6,
-            self.sides[1].reverse_bits() >> 6,
+            reverse_side(&self.sides[0]),
+            reverse_side(&self.sides[3]),
+            reverse_side(&self.sides[2]),
+            reverse_side(&self.sides[1]),
         ];
     }
 }
 
+fn reverse_side(side: &u16) -> u16 {
+    // Reverse a side - because the side only takes up 10 bits, we need to
+    // right-shift by 6 bits after reversing. Yuk.
+    side.reverse_bits() >> 6
+}
+
 fn solve_jigsaw(tiles: &mut Vec<Tile>) {
     // Feels like a bit of a dumb algorithm, perhaps there's better? O(N^2).
+    // This assumes that if two tiles have matching sides, that they really are
+    // adjacent - no backtracking or anything.
+
     // Maintain a stack of tiles to process and a vec of tiles that are
     // definitely done (can't be a neighbour of any of the tiles left to
     // process).
@@ -150,6 +157,7 @@ fn solve_jigsaw(tiles: &mut Vec<Tile>) {
     // of the stack to be processed soon.
     // Once all sides of the popped tile have been checked, mark it as done.
     // Continue until the stack of tiles to process is empty.
+
     let mut done: Vec<Tile> = Vec::new();
 
     while let Some(mut tile_to_process) = tiles.pop() {
@@ -157,7 +165,7 @@ fn solve_jigsaw(tiles: &mut Vec<Tile>) {
         for (i, side) in tile_to_process
             .sides
             .iter()
-            .map(|s| s.reverse_bits() >> 6)
+            .map(|s| reverse_side(s))
             .enumerate()
         {
             // We're hunting for another tile with the reversed side to match
@@ -165,7 +173,7 @@ fn solve_jigsaw(tiles: &mut Vec<Tile>) {
 
             if let Some(side_match_idx) = tiles.iter().position(|t| {
                 t.sides.contains(&side)
-                    || (t.sides.contains(&(side.reverse_bits() >> 6)) && !t.orientation_fixed)
+                    || (t.sides.contains(&(reverse_side(&side))) && !t.orientation_fixed)
             }) {
                 let mut side_match = tiles.remove(side_match_idx);
                 if !side_match.orientation_fixed {
@@ -192,12 +200,12 @@ fn solve_jigsaw(tiles: &mut Vec<Tile>) {
                     // four neighbours.
                     done.push(side_match);
                 } else {
-                    // Push this back onto tiles so that it's popped next.
+                    // Push this back onto tiles so that it's popped soon.
                     tiles.push(side_match);
                 }
             }
         }
-        // We're now done with this tile - all existing neighbours have been
+        // We're now done with this tile - all possible neighbours have been
         // found, so push it onto done.
         done.push(tile_to_process);
     }
