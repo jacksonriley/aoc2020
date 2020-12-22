@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
-use std::collections::HashSet;
 use std::collections::VecDeque;
+use std::collections::{hash_map::DefaultHasher, HashSet};
+use std::hash::{Hash, Hasher};
 use std::time::Instant;
 
 type Deck = VecDeque<usize>;
@@ -26,28 +27,40 @@ fn play_simple_round(decks: &mut (Deck, Deck)) {
     }
 }
 
-fn play_recursive_game(mut decks: (Deck, Deck)) -> (Winner, Deck) {
-    let mut seen: HashSet<(Deck, Deck)> = HashSet::new();
+fn play_recursive_game(mut decks: (Deck, Deck), top_game: bool) -> (Winner, Deck) {
+    // Short circuit sub-game if player 1 has the largest card - as in this
+    // event, player 1 will always win, and that's all that we care about.
+    if !top_game {
+        let max_1 = decks.0.iter().max().unwrap();
+        if decks.1.iter().all(|card| card < max_1) {
+            return (Winner::Player1, decks.0);
+        }
+    }
+
+    let mut seen: HashSet<u64> = HashSet::new();
 
     while !decks.0.is_empty() && !decks.1.is_empty() {
-        if !seen.insert((decks.0.clone(), decks.1.clone())) {
+        if !seen.insert(hash_decks(&decks)) {
             // We've already seen these decks in a previous round - player 1
             // wins
-            return (Winner::Player1, decks.0)
+            return (Winner::Player1, decks.0);
         }
         let top_0 = decks.0.pop_front().unwrap();
         let top_1 = decks.1.pop_front().unwrap();
         if decks.0.len() >= top_0 && decks.1.len() >= top_1 {
             // Determine the winner by playing a sub-game
-            match play_recursive_game((
-                decks.0.iter().take(top_0).cloned().collect(),
-                decks.1.iter().take(top_1).cloned().collect(),
-            )).0 {
-                Winner::Player1 => {
+            match play_recursive_game(
+                (
+                    decks.0.iter().take(top_0).copied().collect(),
+                    decks.1.iter().take(top_1).copied().collect(),
+                ),
+                false,
+            ) {
+                (Winner::Player1, _) => {
                     decks.0.push_back(top_0);
                     decks.0.push_back(top_1);
                 }
-                Winner::Player2 => {
+                (Winner::Player2, _) => {
                     decks.1.push_back(top_1);
                     decks.1.push_back(top_0);
                 }
@@ -75,6 +88,19 @@ fn play_recursive_game(mut decks: (Deck, Deck)) -> (Winner, Deck) {
     }
 }
 
+fn hash_decks(decks: &(Deck, Deck)) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    decks.0.hash(&mut hasher);
+    decks.1.hash(&mut hasher);
+    hasher.finish()
+}
+
+fn calculate_score(deck: &Deck) -> usize {
+    deck.iter()
+        .enumerate()
+        .map(|(i, card)| *card * (deck.len() - i))
+        .sum()
+}
 
 fn main() -> Result<(), std::io::Error> {
     let now = Instant::now();
@@ -115,21 +141,13 @@ fn part_one(decks: &(Deck, Deck)) -> usize {
     if decks.0.is_empty() {
         winner = &decks.1;
     }
-    winner
-        .iter()
-        .enumerate()
-        .map(|(i, card)| *card * (winner.len() - i))
-        .sum()
+    calculate_score(winner)
 }
 
 fn part_two(decks: &(Deck, Deck)) -> usize {
     let decks = decks.clone();
-    let winner = play_recursive_game(decks).1;
-    winner
-        .iter()
-        .enumerate()
-        .map(|(i, card)| *card * (winner.len() - i))
-        .sum()
+    let winner = play_recursive_game(decks, true).1;
+    calculate_score(&winner)
 }
 
 #[test]
