@@ -4,7 +4,7 @@ use std::collections::{hash_map::DefaultHasher, HashSet};
 use std::hash::{Hash, Hasher};
 use std::time::Instant;
 
-type Deck = VecDeque<usize>;
+type Deck = VecDeque<u8>;
 
 enum Winner {
     Player1,
@@ -47,12 +47,12 @@ fn play_recursive_game(mut decks: (Deck, Deck), top_game: bool) -> (Winner, Deck
         }
         let top_0 = decks.0.pop_front().unwrap();
         let top_1 = decks.1.pop_front().unwrap();
-        if decks.0.len() >= top_0 && decks.1.len() >= top_1 {
+        if decks.0.len() >= top_0 as usize && decks.1.len() >= top_1 as usize {
             // Determine the winner by playing a sub-game
             match play_recursive_game(
                 (
-                    decks.0.iter().take(top_0).copied().collect(),
-                    decks.1.iter().take(top_1).copied().collect(),
+                    decks.0.iter().take(top_0 as usize).copied().collect(),
+                    decks.1.iter().take(top_1 as usize).copied().collect(),
                 ),
                 false,
             ) {
@@ -98,7 +98,7 @@ fn hash_decks(decks: &(Deck, Deck)) -> u64 {
 fn calculate_score(deck: &Deck) -> usize {
     deck.iter()
         .enumerate()
-        .map(|(i, card)| *card * (deck.len() - i))
+        .map(|(i, card)| *card as usize * (deck.len() - i))
         .sum()
 }
 
