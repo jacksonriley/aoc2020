@@ -18,24 +18,27 @@ fn parse_input(input: &str) -> (u64, u64) {
     (card_public, door_public)
 }
 
-fn part_one(card_public: u64, card_door: u64) -> u64 {
-    let mut card_loop_size = 0;
-    let mut current = 1;
+fn part_one(card_public: u64, door_public: u64) -> u64 {
+    // Only loop the minimum required number of times by using an implicit
+    // loop size - as soon as one of the public keys reach the observed card or
+    // door public key, the correpsonding encryption key will be correct.
+    let mut public_keys = [1, 1];
+    let mut encryption_key = [1, 1];
+    let mut which = 0;
     loop {
-        card_loop_size += 1;
-        current *= 7;
-        current %= MOD;
-        if current == card_public {
-            break;
+        public_keys[0] = (public_keys[0] * 7) % MOD;
+        public_keys[1] = (public_keys[1] * 7) % MOD;
+        encryption_key[0] = (encryption_key[0] * card_public) % MOD;
+        encryption_key[1] = (encryption_key[1] * door_public) % MOD;
+        if public_keys[0] == door_public {
+            break
+        }
+        if public_keys[1] == card_public {
+            which = 1;
+            break
         }
     }
-
-    let mut encryption_key = 1;
-    for _ in 0..card_loop_size {
-        encryption_key *= card_door;
-        encryption_key %= MOD;
-    }
-    encryption_key
+    encryption_key[which]
 }
 
 #[test]
