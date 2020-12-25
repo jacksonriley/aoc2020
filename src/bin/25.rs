@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::time::Instant;
 
 const MOD: u64 = 20201227;
@@ -18,27 +19,51 @@ fn parse_input(input: &str) -> (u64, u64) {
     (card_public, door_public)
 }
 
-fn part_one(card_public: u64, door_public: u64) -> u64 {
-    // Only loop the minimum required number of times by using an implicit
-    // loop size - as soon as one of the public keys reach the observed card or
-    // door public key, the correpsonding encryption key will be correct.
-    let mut public_keys = [1, 1];
-    let mut encryption_key = [1, 1];
-    let mut which = 0;
-    loop {
-        public_keys[0] = (public_keys[0] * 7) % MOD;
-        public_keys[1] = (public_keys[1] * 7) % MOD;
-        encryption_key[0] = (encryption_key[0] * card_public) % MOD;
-        encryption_key[1] = (encryption_key[1] * door_public) % MOD;
-        if public_keys[0] == door_public {
-            break
-        }
-        if public_keys[1] == card_public {
-            which = 1;
-            break
-        }
+fn mod_pow(mut base: u64, mut exp: u64, modulus: u64) -> u64 {
+    // Modular exponentiation by squaring
+    if modulus == 1 {
+        return 0;
     }
-    encryption_key[which]
+    let mut result = 1;
+    base %= modulus;
+    while exp > 0 {
+        if exp % 2 == 1 {
+            result = result * base % modulus;
+        }
+        exp >>= 1;
+        base = base * base % modulus
+    }
+    result
+}
+
+fn part_one(card_public: u64, door_public: u64) -> u64 {
+    // Uses https://en.wikipedia.org/wiki/Baby-step_giant-step to get the
+    // number of loops, and then the encrypted key is simply the modular
+    // exponentiation of the other public key to the number of loops.
+    // Can't say I fully understand the algorithm but it makes the code go brr.
+    let g = 7;
+    let m = (MOD as f64).sqrt().ceil() as u64;
+    let mut table: HashMap<u64, u64> = HashMap::new();
+    let mut e = 1u64;
+    for i in 0..m {
+        table.insert(e, i);
+        e = (e * g) % MOD;
+    }
+
+    let factor = mod_pow(g, MOD - m - 1, MOD);
+
+    let mut loops = 0;
+
+    e = card_public;
+    for j in 0..m {
+        if table.contains_key(&e) {
+            loops = j * m + table.get(&e).unwrap();
+            break;
+        }
+        e = (e * factor) % MOD;
+    }
+
+    mod_pow(door_public, loops, MOD)
 }
 
 #[test]
